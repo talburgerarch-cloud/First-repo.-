@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LifeVault Prototype</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f4f6f9; color: #333; }
+    header { background: #2d89ef; color: white; padding: 1rem; text-align: center; font-size: 1.4rem; font-weight: bold; }
+    nav { display: flex; justify-content: space-around; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); position: sticky; top: 0; }
+    nav button { flex: 1; padding: 0.8rem; border: none; background: #fff; cursor: pointer; font-size: 1rem; }
+    nav button.active { border-bottom: 3px solid #2d89ef; font-weight: bold; }
+    main { padding: 1.5rem; }
+    .card { background: #fff; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .card h3 { margin-top: 0; font-size: 1.1rem; display: flex; align-items: center; }
+    .card h3 span { margin-right: 0.5rem; }
+    .add-btn { background: #2d89ef; color: white; padding: 0.8rem 1rem; border: none; border-radius: 8px; cursor: pointer; margin-bottom: 1rem; }
+    .hidden { display: none; }
+    input, textarea { width: 100%; padding: 0.5rem; margin-top: 0.5rem; margin-bottom: 1rem; border-radius: 6px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <header>LifeVault</header>
+  <nav>
+    <button class="active" onclick="showSection('vault', this)">📂 Vault</button>
+    <button onclick="showSection('tasks', this)">⏰ Tasks</button>
+    <button onclick="showSection('handover', this)">🕊️ Handover</button>
+    <button onclick="showSection('settings', this)">⚙️ Settings</button>
+  </nav>
+
+  <main>
+    <!-- Vault Section -->
+    <section id="vault">
+      <button class="add-btn" onclick="toggleForm('vaultForm')">➕ Add Record</button>
+      <div id="vaultForm" class="hidden card">
+        <h3>📑 New Record</h3>
+        <input type="text" id="recordTitle" placeholder="Title (e.g. Insurance Policy)" />
+        <textarea id="recordDetails" placeholder="Details..."></textarea>
+        <button class="add-btn" onclick="addRecord()">Save</button>
+      </div>
+      <div id="vaultList"></div>
+    </section>
+
+    <!-- Tasks Section -->
+    <section id="tasks" class="hidden">
+      <button class="add-btn" onclick="toggleForm('taskForm')">➕ Add Task</button>
+      <div id="taskForm" class="hidden card">
+        <h3>⏳ New Task</h3>
+        <input type="text" id="taskTitle" placeholder="Task title" />
+        <input type="date" id="taskDue" />
+        <button class="add-btn" onclick="addTask()">Save</button>
+      </div>
+      <div id="taskList"></div>
+    </section>
+
+    <!-- Handover Section -->
+    <section id="handover" class="hidden">
+      <div class="card">
+        <h3>🕊️ Emergency Handover</h3>
+        <p>If inactive for 90 days, data will be sent to your chosen executor.</p>
+        <input type="email" id="handoverEmail" placeholder="Executor Email" />
+        <button class="add-btn" onclick="saveHandover()">Save Executor</button>
+        <p id="handoverSaved"></p>
+      </div>
+    </section>
+
+    <!-- Settings Section -->
+    <section id="settings" class="hidden">
+      <div class="card">
+        <h3>⚙️ Settings</h3>
+        <p>Simple local prototype. Your data is stored locally on this device.</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Navigation toggle
+    function showSection(id, btn) {
+      document.querySelectorAll('main section').forEach(s => s.classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
+      document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    function toggleForm(formId) {
+      const el = document.getElementById(formId);
+      el.classList.toggle('hidden');
+    }
+
+    // Vault records persistence
+    let records = JSON.parse(localStorage.getItem('vaultRecords')) || [];
+    function renderRecords() {
+      const list = document.getElementById('vaultList');
+      list.innerHTML = '';
+      records.forEach((rec, i) => {
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.innerHTML = `<h3>📑 ${rec.title}</h3><p>${rec.details}</p>`;
+        list.appendChild(div);
+      });
+    }
+    function addRecord() {
+      const title = document.getElementById('recordTitle').value;
+      const details = document.getElementById('recordDetails').value;
+      if (!title) return;
+      records.push({ title, details });
+      localStorage.setItem('vaultRecords', JSON.stringify(records));
+      document.getElementById('recordTitle').value = '';
+      document.getElementById('recordDetails').value = '';
+      toggleForm('vaultForm');
+      renderRecords();
+    }
+    renderRecords();
+
+    // Tasks persistence
+    let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+    function renderTasks() {
+      const list = document.getElementById('taskList');
+      list.innerHTML = '';
+      tasks.forEach((task, i) => {
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.innerHTML = `<h3>⏳ ${task.title}</h3><p>Due: ${task.due}</p>`;
+        list.appendChild(div);
+      });
+    }
+    function addTask() {
+      const title = document.getElementById('taskTitle').value;
+      const due = document.getElementById('taskDue').value;
+      if (!title || !due) return;
+      tasks.push({ title, due });
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+      document.getElementById('taskTitle').value = '';
+      document.getElementById('taskDue').value = '';
+      toggleForm('taskForm');
+      renderTasks();
+    }
+    renderTasks();
+
+    // Handover persistence
+    let executor = localStorage.getItem('handoverEmail') || '';
+    if (executor) {
+      document.getElementById('handoverEmail').value = executor;
+      document.getElementById('handoverSaved').innerText = `Saved: ${executor}`;
+    }
+    function saveHandover() {
+      executor = document.getElementById('handoverEmail').value;
+      localStorage.setItem('handoverEmail', executor);
+      document.getElementById('handoverSaved').innerText = `Saved: ${executor}`;
+    }
+  </script>
+</body>
+</html>
